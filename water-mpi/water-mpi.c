@@ -15,13 +15,17 @@ void sync_info() {
   // TODO: impl
 }
 
-static void error_exit(const char * f, ...) {
-  va_list args;
-  va_start(args, f);
-  vfprintf(stderr, f, args);
-  va_end(args);
-  exit(1);
+void run_cuda() {
+
 }
+
+// static void error_exit(const char * f, ...) {
+//   va_list args;
+//   va_start(args, f);
+//   vfprintf(stderr, f, args);
+//   va_end(args);
+//   exit(1);
+// }
 
 int main(int argc, char **argv) {
   return 0;

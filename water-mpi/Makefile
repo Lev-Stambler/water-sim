@@ -6,6 +6,7 @@ CC = mpicc
 CFLAGS = -std=gnu99 -Wall -Werror -g -O3 # release flags
 CFLAGS += -MMD -MP
 LDFLAGS += $(LIBS)
+LDFLAGS+=-L/usr/local/depot/cuda-10.2/lib64/ -lcudart
 
 default:	$(TARGET)
 all:		$(TARGET)
