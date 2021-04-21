@@ -11,12 +11,14 @@
 #include <stdarg.h>
 #include "mpi.h"
 
+void computeSection();
+
 void sync_info() {
   // TODO: impl
 }
 
 void run_cuda() {
-
+  computeSection();
 }
 
 // static void error_exit(const char * f, ...) {
