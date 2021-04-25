@@ -1,4 +1,3 @@
-#include "mpi.h"
 #include <assert.h>
 #include <error.h>
 #include <limits.h>
@@ -9,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mpi.h"
 
 #define MPI_CELL_DATA_TYPE MPI_INT
 typedef int CellData;
