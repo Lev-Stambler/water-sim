@@ -1,4 +1,3 @@
-#include "mpi.h"
 #include <assert.h>
 #include <error.h>
 #include <limits.h>
@@ -10,12 +9,17 @@
 #include <string.h>
 #include <time.h>
 
-#define MPI_CELL_DATA_TYPE MPI_INT
+// TODO: delete uinst
+#include <unistd.h>
+
+#include "mpi.h"
+
+#define MPI_CELL_DATA_TYPE MPI_DOUBLE
 typedef int CellData;
 
 int nproc;
-const int NUMB_BOXES_X = 3;
-const int NUMB_BOXES_Y = 3;
+const int NUMB_BOXES_X = 2;
+const int NUMB_BOXES_Y = 2;
 const int NUMB_BOXES = NUMB_BOXES_X * NUMB_BOXES_Y;
 const int BOX_WIDTH = 101;
 const int BOX_HEIGHT = 101;
@@ -177,7 +181,10 @@ void wait_all_sends(MPI_Request *south_req, MPI_Request *north_req,
 /**
  * @brief Run the cuda section to compute the process current section
  */
-void run_cuda() { computeSection(); }
+void run_cuda() { 
+  usleep(1000 + boxID * 50);
+  computeSection();
+}
 
 // static void error_exit(const char * f, ...) {
 //   va_list args;
@@ -201,10 +208,11 @@ void run_iters(int iters) {
 }
 
 void init_data() {
-  boxData = calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData));
+  boxData = (CellData *) calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData));
 }
 
 int main(int argc, char **argv) {
+  MPI_Init(NULL, NULL);
   init_data();
   MPI_Comm_rank(MPI_COMM_WORLD, &boxID);
 
