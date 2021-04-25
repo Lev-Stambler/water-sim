@@ -1,0 +1,5 @@
+#localhost slots=4
+#[fe80::24e:1ff:feb4:29b8] slots=4
+# ghc51
+128.2.116.186 slots=1
+localhost slots=3

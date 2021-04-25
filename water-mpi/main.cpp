@@ -15,7 +15,7 @@
 #include "mpi.h"
 
 #define MPI_CELL_DATA_TYPE MPI_DOUBLE
-typedef int CellData;
+typedef double CellData;
 
 int nproc;
 const int NUMB_BOXES_X = 2;
@@ -215,6 +215,7 @@ int main(int argc, char **argv) {
   MPI_Init(NULL, NULL);
   init_data();
   MPI_Comm_rank(MPI_COMM_WORLD, &boxID);
+  printf("Running\n");
 
   // Get total number of processes specificed at start of run
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -222,6 +223,8 @@ int main(int argc, char **argv) {
   xBoxPos = boxID % NUMB_BOXES_X;
   yBoxPos = boxID / NUMB_BOXES_X;
 
-  run_iters(3);
+  run_iters(1);
+  free(boxData);
+  MPI_Finalize();
   return 0;
 }
