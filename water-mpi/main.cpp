@@ -1,3 +1,4 @@
+#include "mpi.h"
 #include <assert.h>
 #include <error.h>
 #include <limits.h>
@@ -8,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "mpi.h"
 
 #define MPI_CELL_DATA_TYPE MPI_INT
 typedef int CellData;
@@ -78,37 +78,40 @@ void update_curr_boundary() {
 
   if (NUMB_BOXES_Y > 1) {
     if (yBoxPos == 0) {
-      receive_data(calc_id(xBoxPos, yBoxPos + 1), boxBottomBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos, yBoxPos + 1), boxBottomBoundaryData,
+                   BOX_WIDTH);
     } else if (yBoxPos < NUMB_BOXES_Y - 1) {
-      receive_data(calc_id(xBoxPos, yBoxPos - 1), boxTopBoundaryData, BOX_WIDTH);
-      receive_data(calc_id(xBoxPos, yBoxPos + 1), boxBottomBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos, yBoxPos - 1), boxTopBoundaryData,
+                   BOX_WIDTH);
+      receive_data(calc_id(xBoxPos, yBoxPos + 1), boxBottomBoundaryData,
+                   BOX_WIDTH);
     } else {
-      receive_data(calc_id(xBoxPos, yBoxPos - 1), boxTopBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos, yBoxPos - 1), boxTopBoundaryData,
+                   BOX_WIDTH);
     }
   }
   if (NUMB_BOXES_X > 0) {
     if (xBoxPos == 0) {
-      receive_data(calc_id(xBoxPos + 1, yBoxPos), boxRightBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos + 1, yBoxPos), boxRightBoundaryData,
+                   BOX_WIDTH);
       set_box_col(boxRightBoundaryData, BOX_WIDTH - 1);
     } else if (xBoxPos < NUMB_BOXES_X - 1) {
-      receive_data(calc_id(xBoxPos + 1, yBoxPos), boxRightBoundaryData, BOX_WIDTH);
-      receive_data(calc_id(xBoxPos - 1, yBoxPos), boxLeftBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos + 1, yBoxPos), boxRightBoundaryData,
+                   BOX_WIDTH);
+      receive_data(calc_id(xBoxPos - 1, yBoxPos), boxLeftBoundaryData,
+                   BOX_WIDTH);
       set_box_col(boxRightBoundaryData, BOX_WIDTH - 1);
       set_box_col(boxLeftBoundaryData, 0);
     } else {
-      receive_data(calc_id(xBoxPos - 1, yBoxPos), boxLeftBoundaryData, BOX_WIDTH);
+      receive_data(calc_id(xBoxPos - 1, yBoxPos), boxLeftBoundaryData,
+                   BOX_WIDTH);
       set_box_col(boxLeftBoundaryData, 0);
     }
   }
-
 }
 
-void send_boundry_px_msg() {
-  MPI_Request south_req;
-  MPI_Request north_req;
-  MPI_Request west_req;
-  MPI_Request east_req;
-
+void send_boundry_px_msg(MPI_Request *south_req, MPI_Request *north_req,
+                         MPI_Request *west_req, MPI_Request *east_req) {
   CellData *boxBottomData = &boxData[(BOX_HEIGHT - 2) * BOX_WIDTH];
   CellData *boxTopData = &boxData[1];
   CellData boxLeftData[BOX_HEIGHT];
@@ -119,30 +122,54 @@ void send_boundry_px_msg() {
   if (NUMB_BOXES_Y > 1) {
     if (yBoxPos == 0) {
       send_async_to_box(calc_id(xBoxPos, yBoxPos + 1), boxBottomData, BOX_WIDTH,
-                        &south_req);
+                        south_req);
     } else if (yBoxPos < NUMB_BOXES_Y - 1) {
       send_async_to_box(calc_id(xBoxPos, yBoxPos - 1), boxTopData, BOX_WIDTH,
-                        &north_req);
+                        north_req);
       send_async_to_box(calc_id(xBoxPos, yBoxPos + 1), boxBottomData, BOX_WIDTH,
-                        &south_req);
+                        south_req);
     } else {
       // Send to the noth
       send_async_to_box(calc_id(xBoxPos, yBoxPos - 1), boxTopData, BOX_WIDTH,
-                        &north_req);
+                        north_req);
     }
   }
   if (NUMB_BOXES_X > 0) {
     if (xBoxPos == 0) {
       send_async_to_box(calc_id(xBoxPos + 1, yBoxPos), boxRightData, BOX_WIDTH,
-                        &east_req);
+                        east_req);
     } else if (xBoxPos < NUMB_BOXES_X - 1) {
       send_async_to_box(calc_id(xBoxPos + 1, yBoxPos), boxRightData, BOX_WIDTH,
-                        &east_req);
+                        east_req);
       send_async_to_box(calc_id(xBoxPos - 1, yBoxPos), boxLeftData, BOX_WIDTH,
-                        &west_req);
+                        west_req);
     } else {
       send_async_to_box(calc_id(xBoxPos - 1, yBoxPos), boxLeftData, BOX_WIDTH,
-                        &west_req);
+                        west_req);
+    }
+  }
+}
+
+void wait_all_sends(MPI_Request *south_req, MPI_Request *north_req,
+                    MPI_Request *west_req, MPI_Request *east_req) {
+  if (NUMB_BOXES_Y > 1) {
+    if (yBoxPos == 0) {
+      MPI_Wait(south_req, MPI_STATUS_IGNORE);
+    } else if (yBoxPos < NUMB_BOXES_Y - 1) {
+      MPI_Wait(south_req, MPI_STATUS_IGNORE);
+      MPI_Wait(north_req, MPI_STATUS_IGNORE);
+    } else {
+      MPI_Wait(north_req, MPI_STATUS_IGNORE);
+    }
+  }
+  if (NUMB_BOXES_X > 0) {
+    if (xBoxPos == 0) {
+      MPI_Wait(east_req, MPI_STATUS_IGNORE);
+    } else if (xBoxPos < NUMB_BOXES_X - 1) {
+      MPI_Wait(east_req, MPI_STATUS_IGNORE);
+      MPI_Wait(west_req, MPI_STATUS_IGNORE);
+    } else {
+      MPI_Wait(west_req, MPI_STATUS_IGNORE);
     }
   }
 }
@@ -160,7 +187,25 @@ void run_cuda() { computeSection(); }
 //   exit(1);
 // }
 
+void run_iters(int iters) {
+  MPI_Request south_req;
+  MPI_Request north_req;
+  MPI_Request west_req;
+  MPI_Request east_req;
+  for (size_t i = 0; i < iters; i++) {
+    run_cuda();
+    send_boundry_px_msg(&south_req, &north_req, &west_req, &east_req);
+    update_curr_boundary();
+    wait_all_sends(&south_req, &north_req, &west_req, &east_req);
+  }
+}
+
+void init_data() {
+  boxData = calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData));
+}
+
 int main(int argc, char **argv) {
+  init_data();
   MPI_Comm_rank(MPI_COMM_WORLD, &boxID);
 
   // Get total number of processes specificed at start of run
@@ -168,5 +213,7 @@ int main(int argc, char **argv) {
   assert(nproc == NUMB_BOXES);
   xBoxPos = boxID % NUMB_BOXES_X;
   yBoxPos = boxID / NUMB_BOXES_X;
+
+  run_iters(3);
   return 0;
 }
