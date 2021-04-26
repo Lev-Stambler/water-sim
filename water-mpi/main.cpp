@@ -251,13 +251,16 @@ void run_iters(int iters) {
 }
 
 void init_data() {
+  if (boxID == 0) {
+    wholeData = (CellData *) calloc(BOX_WIDTH * NUMB_BOXES_X * BOX_HEIGHT * NUMB_BOXES_Y, sizeof(CellData));
+  }
   boxData = (CellData *) calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData));
 }
 
 int main(int argc, char **argv) {
   MPI_Init(NULL, NULL);
-  init_data();
   MPI_Comm_rank(MPI_COMM_WORLD, &boxID);
+  init_data();
   printf("Running\n");
 
   // Get total number of processes specificed at start of run
