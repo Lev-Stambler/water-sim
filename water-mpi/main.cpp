@@ -1,4 +1,3 @@
-#include "mpi.h"
 #include <assert.h>
 #include <error.h>
 #include <limits.h>
@@ -9,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "mpi.h"
 
 #define MPI_CELL_DATA_TYPE MPI_INT
 typedef int CellData;
@@ -20,6 +20,7 @@ const int NUMB_BOXES = NUMB_BOXES_X * NUMB_BOXES_Y;
 const int BOX_WIDTH = 101;
 const int BOX_HEIGHT = 101;
 CellData *boxData;
+CellData *wholeData;
 int boxID;
 int xBoxPos;
 int yBoxPos;
@@ -65,6 +66,47 @@ static void get_box_col(CellData *col, int colNumb) {
 static void receive_data(int senderID, CellData *data, int count) {
   MPI_Recv(data, count, MPI_CELL_DATA_TYPE, senderID, 0, MPI_COMM_WORLD,
            MPI_STATUS_IGNORE);
+}
+
+static void box_data_from_whole(CellData *box, int proc) {
+  int startY = BOX_HEIGHT * (proc / NUMB_BOXES_X);
+  int startX = BOX_WIDTH * (proc % NUMB_BOXES_X);
+  for (size_t y = 0; y < BOX_HEIGHT; y++) {
+    for (size_t x = 0; x < BOX_WIDTH; x++) {
+      int row = y + startY;
+      int col = x + startX;
+      box[y * BOX_WIDTH + x] =
+          wholeData[(BOX_WIDTH * NUMB_BOXES_X) * row + col];
+    }
+  }
+}
+
+static void receive_init_data() {
+  receive_data(0, boxData, BOX_HEIGHT * BOX_WIDTH);
+}
+
+static void send_init_data_to_slaves() {
+  CellData boxData[BOX_WIDTH * BOX_HEIGHT];
+  MPI_Request reqs[nproc - 1];
+  for (int proc = 1; proc < nproc; proc++) {
+    box_data_from_whole(boxData, proc);
+    MPI_Isend(boxData, BOX_WIDTH * BOX_HEIGHT, MPI_CELL_DATA_TYPE, proc, 0,
+              MPI_COMM_WORLD, &reqs[proc - 1]);
+  }
+  for (int i = 1; i < nproc; i++) {
+    MPI_Wait(&reqs[i - 1], MPI_STATUS_IGNORE);
+  }
+}
+
+static void sync_data() {
+  if (boxID == 0) {
+    CellData tmp[BOX_WIDTH * BOX_HEIGHT];
+    for (size_t i = 1; i < nproc; i++) {
+      receive_data(i, tmp, BOX_WIDTH * BOX_HEIGHT);
+    }
+  } else {
+    MPI_Send(boxData, BOX_WIDTH * BOX_HEIGHT, MPI_CELL_DATA_TYPE, 0, 0, MPI_COMM_WORLD);
+  }
 }
 
 // TODO: does sending over the 0th and last of every bottom/ top/ left/ right
@@ -200,11 +242,11 @@ void run_iters(int iters) {
   }
 }
 
-void init_data() {
-  boxData = calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData));
-}
+
+void init_data() { boxData = (CellData  *) calloc(BOX_HEIGHT * BOX_WIDTH, sizeof(CellData)); }
 
 int main(int argc, char **argv) {
+
   init_data();
   MPI_Comm_rank(MPI_COMM_WORLD, &boxID);
 
@@ -214,6 +256,18 @@ int main(int argc, char **argv) {
   xBoxPos = boxID % NUMB_BOXES_X;
   yBoxPos = boxID / NUMB_BOXES_X;
 
+  if (boxID == 0) {
+    send_init_data_to_slaves();
+    // Copy the top left box into the boxData
+    for (int y = 0; y < NUMB_BOXES; y++)
+      for (int x = 0; x < NUMB_BOXES; x++)
+        boxData[y * BOX_WIDTH + x] = wholeData[y * BOX_WIDTH * NUMB_BOXES_X + x];
+  } else {
+    receive_init_data();
+  }
+
   run_iters(3);
+
+  sync_data();
   return 0;
 }
