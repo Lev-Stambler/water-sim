@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "mpi.h"
+#include <mpi-ext.h>
 
 #define MPI_CELL_DATA_TYPE MPI_DOUBLE
 typedef double CellData;
@@ -263,6 +264,7 @@ int main(int argc, char **argv) {
   init_data();
   printf("Running\n");
 
+  printf("%s\n", MPIX_Query_cuda_support() ? "Running with CUDA support" : " Running without CUDA support");
   // Get total number of processes specificed at start of run
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   assert(nproc == NUMB_BOXES);
