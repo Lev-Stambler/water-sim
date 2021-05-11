@@ -1,5 +1,5 @@
 #localhost slots=4
 #[fe80::24e:1ff:feb4:29b8] slots=4
 # ghc51
-lstamble@ghc50.ghc.andrew.cmu.edu slots=1
-lstamble@ghc53.ghc.andrew.cmu.edu slots=3
+128.2.116.184:22 slots=1
+128.2.116.182:22 slots=3
